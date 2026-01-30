@@ -50,27 +50,36 @@ def fetch_data(fred_key, days=90):
         end = datetime.now()
         start = end - timedelta(days=days)
         
-        # 黄金
+        # 黄金 - 修复：直接获取Series
         try:
-            gold = yf.download('GC=F', start=start, end=end, progress=False)
-            if not gold.empty:
-                data['黄金价格'] = gold['Close']
+            gold_df = yf.download('GC=F', start=start, end=end, progress=False)
+            if not gold_df.empty and 'Close' in gold_df.columns:
+                data['黄金价格'] = gold_df['Close'].squeeze()
         except Exception as e:
             errors.append(f"黄金: {str(e)}")
         
-        # 美元指数
+        # 美元指数 - 修复：直接获取Series
         try:
-            dxy = yf.download('DX-Y.NYB', start=start, end=end, progress=False)
-            if not dxy.empty:
-                data['美元指数'] = dxy['Close']
+            dxy_df = yf.download('DX-Y.NYB', start=start, end=end, progress=False)
+            if not dxy_df.empty and 'Close' in dxy_df.columns:
+                data['美元指数'] = dxy_df['Close'].squeeze()
         except Exception as e:
             errors.append(f"美元指数: {str(e)}")
             
     except Exception as e:
         errors.append(f"Yahoo: {str(e)}")
     
-    df = pd.DataFrame(data) if data else pd.DataFrame()
-    return df, errors
+    # 修复：确保所有数据都是Series格式
+    if not data:
+        return pd.DataFrame(), errors
+    
+    # 转换为DataFrame
+    try:
+        df = pd.DataFrame(data)
+        return df, errors
+    except Exception as e:
+        errors.append(f"数据合并错误: {str(e)}")
+        return pd.DataFrame(), errors
 
 # ============ 主界面 ============
 
